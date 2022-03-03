@@ -183,9 +183,10 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
     }
   })
 
-  visit(markdownAST, `text`, node => {
+  visit(markdownAST, `text`, (node, index, parent) => {
     var bibtex = node.value.match(/@@bibliography@@([^]*)@@bibliography@@/gm);
     if (bibtex && bibtex.length > 0) {
+      parent.type = "div"
       bibtex = bibtex[0].replace("@@bibliography@@", "").replace("@@bibliography@@", "")
       const parsedEntries = bibtexParse.toJSON(bibtex);
       for (const entry of parsedEntries) {
@@ -223,9 +224,10 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
     }
   });
 
-  visit(markdownAST, `text`, node => {
+  visit(markdownAST, `text`, (node, index, parent) => {
     var bibtex = node.value.match(/@@bibliography@@([^]*)@@bibliography@@/gm);
     if (bibtex && bibtex.length > 0) {
+      parent.type = "div"
       let res = '<ol>';
 
       citations.forEach(key => {
