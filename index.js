@@ -228,7 +228,7 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
   visit(markdownAST, `text`, node => {
     var citekeys = node.value.match(/\\cite{([^}]*)}/g);
 
-    console.log(citekeys);
+    //console.log(citekeys);
     for (var k in citekeys) {
       const keys_str = citekeys[k].substring(6, citekeys[k].length - 1);
       const keys = keys_str.split(',');
