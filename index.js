@@ -16,7 +16,9 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
 
   const parsedEntries = bibtexParse.toJSON(bibtex);
   for (const entry of parsedEntries) {
+    console.log(`entry:\t${JSON.stringify(entry)}`);
     for (const [key, value] of Object.entries(entry.entryTags)) {
+      console.log(`key:\t${key}\tvalue:\t${value}`);
       entry.entryTags[key.toLowerCase()] = normalizeTag(value);
     }
     entry.entryTags.type = entry.entryType;
@@ -60,6 +62,13 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
       issue = (issue != undefined) ? '(' + issue + ')' : '';
       cite += ', Vol ' + ent.volume + issue;
     }
+    // FIXME: add chapter and edition
+    if ('edition' in ent) {
+      cite += ', ' + ent.edition + ' ed.';
+    }
+    if ('chapter' in ent) {
+      cite += ', ' + 'Chapter ' + ent.chapter;
+    }
     if ('pages' in ent) {
       cite += ', pp. ' + ent.pages;
     }
@@ -74,16 +83,22 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
   function link_string(ent) {
     if ('url' in ent) {
       var url = ent.url;
+      console.log(`url (before):\t${url}`);
+      if (url.startsWith('\\url{') && url.endsWith('}')) {
+        url = `https://${url.slice(5, -1)}`;
+      }
       var arxiv_match = (/arxiv\.org\/abs\/([0-9\.]*)/).exec(url);
       if (arxiv_match != null) {
-        url = `http://arxiv.org/pdf/${arxiv_match[1]}.pdf`;
+        url = `https://arxiv.org/pdf/${arxiv_match[1]}.pdf`;
+        var label = 'arXiv'
       }
-
+      // handle PDFs
       if (url.slice(-4) == '.pdf') {
         var label = 'PDF';
       } else if (url.slice(-5) == '.html') {
         var label = 'HTML';
       }
+      console.log(`url (after):\t${url}`);
       return ` &ensp;<a href="${url}">[${label || 'link'}]</a>`;
     }/* else if ("doi" in ent){
     return ` &ensp;<a href="https://doi.org/${ent.doi}" >[DOI]</a>`;
@@ -111,6 +126,9 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
       }
       cite += venue_string(ent);
       cite += doi_string(ent);
+      console.log(`cite (before cleanup):\t${cite}`);
+      cite = cleanupCitation(cite);
+      console.log(`cite (after cleanup):\t${cite}`)
       return cite;
       /*var cite =  author_string(ent, "${L}, ${I}", ", ", " and ");
       if (ent.year || ent.date){
@@ -126,6 +144,13 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
     } else {
       return '?';
     }
+  }
+
+  function cleanupCitation(cite) {
+    cite = cite.replace(". , ", ". ");
+    // em-dash
+    cite = cite.replace("--", "&mdash;");
+    return cite;
   }
 
   function hover_cite(ent) {
@@ -166,7 +191,7 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
   }
 
   visit(markdownAST, "html", (node, index, parent) => {
-    console.log(node.value)
+    //console.log(node.value)
     if (node.value.startsWith(`<bibliography>`)) {
       parent.type = "div"
 
@@ -189,6 +214,7 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
       parent.type = "div"
       bibtex = bibtex[0].replace("@@bibliography@@", "").replace("@@bibliography@@", "")
       const parsedEntries = bibtexParse.toJSON(bibtex);
+      console.log(`parsedEntries:\t${JSON.stringify(parsedEntries)}`);
       for (const entry of parsedEntries) {
         for (const [key, value] of Object.entries(entry.entryTags)) {
           entry.entryTags[key.toLowerCase()] = normalizeTag(value);
@@ -202,7 +228,7 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
   visit(markdownAST, `text`, node => {
     var citekeys = node.value.match(/\\cite{([^}]*)}/g);
 
-    //console.log(citekeys);
+    console.log(citekeys);
     for (var k in citekeys) {
       const keys_str = citekeys[k].substring(6, citekeys[k].length - 1);
       const keys = keys_str.split(',');
@@ -229,7 +255,7 @@ module.exports = ({ markdownAST, markdownNode, getNode }, { components }) => {
     if (bibtex && bibtex.length > 0) {
       parent.type = "div"
       let res = '<ol>';
-
+      //console.log(`citations:\t${JSON.stringify(citations)}`);
       citations.forEach(key => {
         res += '<li>' + bibliography_cite(bibliography.get(key)) + '</li>';
       });
